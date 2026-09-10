@@ -6,6 +6,11 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
 # Environment variables / secrets
 .env
 
