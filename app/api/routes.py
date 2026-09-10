@@ -1421,7 +1421,84 @@ def predict_stylometry_model2(text: str):
 
 
 # ---------# MODEL 2 - TUNED NAIVE BAYES
+# ------------------------------------------------------------
+# MODEL 3 - RANDOM FOREST
+# ------------------------------------------------------------
 
+model3 = joblib.load("model3_random_forest.pkl")
+model3_features = joblib.load("model3_features.pkl")
+
+
+def extract_model3_features(text):
+    import re
+
+    words = re.findall(r"\b\w+\b", text)
+    sentences = re.split(r"[.!?]+", text)
+    sentences = [s for s in sentences if s.strip()]
+
+    word_count = len(words)
+    sentence_count = len(sentences)
+    character_count = len(text)
+    average_word_length = (
+        sum(len(word) for word in words) / word_count
+        if word_count else 0
+    )
+    average_sentence_length = (
+        word_count / sentence_count
+        if sentence_count else 0
+    )
+    punctuation_count = sum(
+        1 for char in text if char in ".,!?;:'\"-()[]{}"
+    )
+    uppercase_count = sum(
+        1 for char in text if char.isupper()
+    )
+    digit_count = sum(
+        1 for char in text if char.isdigit()
+    )
+    unique_words = len(set(words))
+    vocabulary_richness = (
+        unique_words / word_count
+        if word_count else 0
+    )
+
+    feature_values = {
+        "word_count": word_count,
+        "sentence_count": sentence_count,
+        "character_count": character_count,
+        "average_word_length": average_word_length,
+        "average_sentence_length": average_sentence_length,
+        "punctuation_count": punctuation_count,
+        "uppercase_count": uppercase_count,
+        "digit_count": digit_count,
+        "unique_words": unique_words,
+        "vocabulary_richness": vocabulary_richness
+    }
+
+    return [
+        feature_values[name]
+        for name in model3_features
+    ]
+
+
+@router.post("/stylometry/model3")
+def predict_stylometry_model3(text: str):
+    features = np.array(
+        [extract_model3_features(text)]
+    )
+
+    prediction = model3.predict(features)
+
+    if hasattr(model3, "predict_proba"):
+        probabilities = model3.predict_proba(features)[0]
+        confidence = float(probabilities.max() * 100)
+    else:
+        confidence = 0.0
+
+    return {
+        "predicted_author": int(prediction[0]),
+        "match_score": round(confidence, 2)
+    }
 # ------------------------------------------------------------
 # SAVE STYLOMETRY RESULT
 # ------------------------------------------------------------
