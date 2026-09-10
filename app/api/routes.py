@@ -1500,6 +1500,54 @@ def predict_stylometry_model3(text: str):
         "match_score": round(confidence, 2)
     }
 # ------------------------------------------------------------
+# ------------------------------------------------------------
+# SIMILARITY MODEL
+# ------------------------------------------------------------
+
+similarity_vectorizer = joblib.load(
+    "models/similarity/similarity_tfidf_vectorizer.pkl"
+)
+
+similarity_matrix = joblib.load(
+    "models/similarity/similarity_tfidf_matrix.pkl"
+)
+
+similarity_reference_data = joblib.load(
+    "models/similarity/similarity_reference_data.pkl"
+)
+
+
+@router.post("/stylometry/similarity")
+def stylometry_similarity(text: str):
+    from sklearn.metrics.pairwise import cosine_similarity
+
+    query_vector = similarity_vectorizer.transform([text])
+
+    similarities = cosine_similarity(
+        query_vector,
+        similarity_matrix
+    )[0]
+
+    top_indices = similarities.argsort()[-10:][::-1]
+
+    results = []
+
+    for index in top_indices:
+        reference = similarity_reference_data.iloc[index]
+
+        results.append({
+            "similarity_score": round(
+                float(similarities[index]),
+                4
+            ),
+            "author_id": int(reference["author_id"]),
+            "text": reference["text"]
+        })
+
+    return {
+        "query": text,
+        "matches": results
+    }
 # SAVE STYLOMETRY RESULT
 # ------------------------------------------------------------
 
