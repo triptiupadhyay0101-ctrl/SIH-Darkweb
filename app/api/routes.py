@@ -1354,18 +1354,12 @@ class StylometryCreate(BaseModel):
 
 @router.post("/stylometry/predict")
 def predict_stylometry(text: str):
-    word_features = word_vectorizer.transform([text])
-    char_features = char_vectorizer.transform([text])
 
-    features = hstack([
-        word_features,
-        char_features
-    ])
-
-    prediction = stylometry_model.predict(features)
+    # Pass RAW TEXT directly to the trained pipeline
+    prediction = stylometry_model.predict([text])
 
     decision_scores = np.asarray(
-        stylometry_model.decision_function(features)
+        stylometry_model.decision_function([text])
     ).ravel()
 
     exp_scores = np.exp(
@@ -1379,8 +1373,11 @@ def predict_stylometry(text: str):
     match_score = relative_confidence * 100
 
     return {
-        "predicted_author": prediction[0].item(),
-        "match_score": round(float(match_score), 2)
+        "predicted_author": prediction[0].item()
+        if hasattr(prediction[0], "item")
+        else prediction[0],
+
+        "confidence": round(float(match_score), 2)
     }
 # # MODEL 2 - TUNED NAIVE BAYES
 
