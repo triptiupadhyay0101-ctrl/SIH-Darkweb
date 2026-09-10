@@ -1,67 +1,29 @@
-# Methodology — Infrastructure Intelligence Collection
+# Methodology
 
-## 1. Test environment
+## 1. Observe
 
-A Docker container (`darkweb-lab`) runs Debian + Apache + Tor, with Apache's
-`mod_status` deliberately enabled and exposed at `/server-status` without
-authentication. This simulates a real-world misconfigured onion service and
-serves as ground truth for validating detection logic before it is applied
-to any authorized real-world target.
+Collect approved observations with a timestamp and source identifier.
 
-## 2. Observation pipeline
+## 2. Normalize
 
-1. Connect to the target `.onion` address via a local Tor SOCKS5 proxy
-   (`127.0.0.1:9050`).
-2. Fetch `/` — record HTTP status, `Server` header, page title, and a
-   SHA-256 hash of the response body.
-3. Fetch `/favicon.ico` — record its SHA-256 hash (usable for cross-referencing
-   against clearnet favicon databases such as Shodan's `http.favicon.hash`).
-4. Run a battery of GET requests against nine known-sensitive paths
-   (`/server-status`, `/.git/config`, `/.env`, etc.), each with a
-   content-match rule to reduce false positives from custom 200-OK error pages.
-5. Emit one indicator record per positive finding, each carrying a
-   `severity`, `confidence`, and human-readable `evidence` string.
+Convert heterogeneous source records into common entities: `service`, `observation`, `indicator`, `identifier`, `category`, and `source`.
 
-## 3. Storage
+## 3. Fingerprint
 
-All observations and indicators are persisted to a local SQLite database
-using parameterized queries exclusively (no string-built SQL), satisfying
-the project's own secure-coding requirement (SIH PS item 5).
+Generate reproducible, privacy-conscious fingerprints from server metadata, headers, page title, body content and favicon data where available.
 
-## 4. Data quality
+## 4. Detect
 
-Content-matching (not just status-code checks) is used wherever a path's
-positive/negative response can be textually distinguished, to avoid the
-common false-positive of servers returning HTTP 200 for every path
-(soft-404 behavior).
+Flag observable conditions such as exposed diagnostic endpoints, unexpected/default service characteristics and fingerprint changes.
 
-## 5. Real datasets integrated
+## 5. Correlate
 
-- **Bipartite onion↔identifier graph** (139,356 nodes / 248,791 edges) —
-  imported via `ingest-graphml`, gives a real actor-relationship graph
-  (onion services linked to PGP keys, wallets, Telegram handles, etc.)
-  for the backend/AI correlation layer to build on.
-- **Tor Project hidserv-dir metrics** — imported via `ingest-tor-metrics`,
-  gives a network-wide daily onion-count baseline for temporal-context
-  analysis (Module 4 concept).
+Compare observations across time and across services. Combine infrastructure evidence with relationship-graph context.
 
-## 6. Implemented extensions
+## 6. Score
 
-- TLS certificate SHA-256 fingerprint extraction is implemented for
-  HTTPS observations. Where a certificate is available, its fingerprint
-  can be used as an infrastructure-correlation clue.
-- Certificate Transparency correlation through crt.sh is implemented.
-  A certificate match is treated as a correlation signal, not proof of
-  origin ownership or attribution.
-- Favicon fingerprint extraction is implemented for HTTP observations
-  and can support future cross-infrastructure correlation.
-- Wallet extraction and correlation support is implemented for
-  Bitcoin, Ethereum, Monero, and Litecoin indicators.
-- Temporal analysis compares repeated observations for server-banner,
-  body-fingerprint, favicon, and availability changes. Content changes
-  alone are not treated as infrastructure migration.
-- Security hardening includes Tor v3 validation, bounded response
-  processing, validated configuration values, request timeouts,
-  disabled redirects, and configurable batch delays.
-- The module produces structured JSON, CSV, and Markdown investigator
-  reports for downstream backend, ML, graph, and frontend integration.
+Produce an evidence-backed confidence score. The score must not be represented as certainty of real-world identity.
+
+## 7. Explain
+
+Every score should be accompanied by the indicators that contributed to it, their timestamps and their sources.
