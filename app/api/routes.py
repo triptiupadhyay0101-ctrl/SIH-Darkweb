@@ -1383,14 +1383,7 @@ def predict_stylometry(text: str):
         "match_score": round(float(match_score), 2)
     }
 # # MODEL 2 - TUNED NAIVE BAYES
-model2 = joblib.load("models/model2_tuned_alpha001.pkl")
-model2_vectorizer = joblib.load(
-    "models/model2_tuned_tfidf_vectorizer.pkl"
-)
 
-
-@router.post("/stylometry/model2")
-def predict_stylometry_model2(text: str):
     features = model2_vectorizer.transform([text])
 
     prediction = model2.predict(features)
@@ -1425,48 +1418,9 @@ def predict_stylometry_model2(text: str):
         "match_score": round(confidence, 2)
     }
 # MODEL 2 - TUNED NAIVE BAYES
-model2 = joblib.load("models/model2_tuned_alpha001.pkl")
-model2_vectorizer = joblib.load(
-    "models/model2_tuned_tfidf_vectorizer.pkl"
-)
 
-
-@router.post("/stylometry/model2")
-def predict_stylometry_model2(text: str):
-    features = model2_vectorizer.transform([text])
-
-    prediction = model2.predict(features)
-
-    probabilities = model2.predict_proba(features)[0]
-
-    confidence = float(probabilities.max() * 100)
-
-    return {
-        "predicted_author": int(prediction[0]),
-        "match_score": round(confidence, 2)
-    }
 
 # ---------# MODEL 2 - TUNED NAIVE BAYES
-model2 = joblib.load("models/model2_tuned_alpha001.pkl")
-model2_vectorizer = joblib.load(
-    "models/model2_tuned_tfidf_vectorizer.pkl"
-)
-
-
-@router.post("/stylometry/model2")
-def predict_stylometry_model2(text: str):
-    features = model2_vectorizer.transform([text])
-
-    prediction = model2.predict(features)
-
-    probabilities = model2.predict_proba(features)[0]
-
-    confidence = float(probabilities.max() * 100)
-
-    return {
-        "predicted_author": int(prediction[0]),
-        "match_score": round(float(confidence), 2)
-    }
 
 # ------------------------------------------------------------
 # SAVE STYLOMETRY RESULT
