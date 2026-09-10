@@ -5,6 +5,7 @@ import numpy as np
 
 from app.database.neo4j_connection import driver
 from app.database.connection import engine
+from scipy.sparse import hstack
 
 
 router = APIRouter()
@@ -15,6 +16,9 @@ router = APIRouter()
 # ============================================================
 
 stylometry_model = joblib.load("stylometry_model.joblib")
+word_vectorizer = joblib.load("word_vectorizer.pkl")
+char_vectorizer = joblib.load("char_vectorizer.pkl")
+
 
 
 # ============================================================
@@ -1350,39 +1354,34 @@ class StylometryCreate(BaseModel):
 
 @router.post("/stylometry/predict")
 def predict_stylometry(text: str):
+    word_features = word_vectorizer.transform([text])
+    char_features = char_vectorizer.transform([text])
 
-    prediction = stylometry_model.predict(
-        [text]
-    )
+    features = hstack([
+        word_features,
+        char_features
+    ])
+
+    prediction = stylometry_model.predict(features)
 
     decision_scores = np.asarray(
-        stylometry_model.decision_function([text])
+        stylometry_model.decision_function(features)
     ).ravel()
 
-    # Convert decision scores into a relative
-    # confidence-style score.
-    # This is NOT a calibrated probability.
     exp_scores = np.exp(
         decision_scores - decision_scores.max()
     )
 
     relative_confidence = (
-        exp_scores.max()
-        / exp_scores.sum()
+        exp_scores.max() / exp_scores.sum()
     )
 
     match_score = relative_confidence * 100
 
     return {
-        "predicted_author": prediction[0],
-        "match_score": round(
-            float(match_score),
-            2
-        )
+        "predicted_author": prediction[0].item(),
+        "match_score": round(float(match_score), 2)
     }
-
-
-# ------------------------------------------------------------
 # SAVE STYLOMETRY RESULT
 # ------------------------------------------------------------
 
