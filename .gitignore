@@ -1,3 +1,7 @@
+# =========================
+# Frontend / Node
+# =========================
+
 # Logs
 logs
 *.log
@@ -7,16 +11,40 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+node_modules/
+dist/
+dist-ssr/
 *.local
 
-# Editor directories and files
+# =========================
+# Python / Backend
+# =========================
+
+# Virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables / secrets
+.env
+
+# Local ML models
+*.joblib
+
+# =========================
+# Editor / OS files
+# =========================
+
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
+
 .DS_Store
+Thumbs.db
+
 *.suo
 *.ntvs*
 *.njsproj
