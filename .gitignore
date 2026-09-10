@@ -28,6 +28,11 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
 # Environment variables / secrets
 .env
 
@@ -44,9 +49,11 @@ __pycache__/
 
 .DS_Store
 Thumbs.db
+<<<<<<< HEAD
 
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+data/authorship_detection_kazakh_text.csv
