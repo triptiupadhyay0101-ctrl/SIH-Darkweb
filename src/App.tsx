@@ -25,7 +25,7 @@ function App() {
         <Route element={<DashboardLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/search" element={<Search />} />
-          <Route path="/actor-profile" element={<ActorProfile />} />
+          <Route path="/actor-profile/:id" element={<ActorProfile />} />
           <Route path="/relationship-graph" element={<RelationshipGraph />} />
           <Route path="/timeline" element={<Timeline />} />
           <Route path="/ai-results" element={<AIResults />} />

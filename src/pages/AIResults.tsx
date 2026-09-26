@@ -12,9 +12,46 @@ import {
   FileText,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 function AIResults() {
   const navigate = useNavigate();
+   const [actor, setActor] = useState<any>(null);
+  const [attribution, setAttribution] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+  const loadResults = async () => {
+    try {
+      const [actorResponse, attributionResponse] = await Promise.all([
+        fetch("http://127.0.0.1:8000/actors/1"),
+        fetch("http://127.0.0.1:8000/attribution/1"),
+      ]);
+
+      if (actorResponse.ok) {
+        const actorData = await actorResponse.json();
+        setActor(actorData);
+      }
+
+      if (attributionResponse.ok) {
+        const attributionData = await attributionResponse.json();
+        setAttribution(attributionData);
+      }
+    } catch (error) {
+      console.error("Failed to load AI results:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadResults();
+}, []);
+ if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center text-slate-400">
+        Loading AI attribution results...
+      </div>
+    );
+  }
   return (
     <div className="space-y-8">
 
@@ -83,7 +120,7 @@ function AIResults() {
               <div className="text-center">
 
                 <p className="text-6xl font-bold text-white">
-                  96%
+                   {Math.round((attribution?.overall_confidence || 0) * 100)}%
                 </p>
 
                 <p className="mt-1 text-sm font-medium text-emerald-400">
@@ -119,7 +156,7 @@ function AIResults() {
 
             <div>
               <h2 className="text-xl font-semibold text-white">
-                ShadowFox
+                {actor?.name || "ShadowFox"}
               </h2>
 
               <p className="mt-1 text-xs text-slate-500">
@@ -181,21 +218,21 @@ function AIResults() {
             icon={MessageSquare}
             title="Writing Style"
             description="Stylometric similarity across posts"
-            value={94}
+            value={Math.round((attribution?.stylometry_score || 0) * 100)}
           />
 
           <ConfidenceBar
             icon={Clock3}
             title="Behavioural Pattern"
             description="Activity timing and behavioural signals"
-            value={91}
+            value={Math.round((attribution?.behavior_score || 0) * 100)}
           />
 
           <ConfidenceBar
             icon={Globe}
             title="Infrastructure Link"
             description="Related domains and onion services"
-            value={96}
+            value={Math.round((attribution?.evidence_score || 0) * 100)}
           />
 
         </div>
@@ -328,7 +365,8 @@ function AIResults() {
               connecting ShadowFox with the observed handles, cryptographic
               identifiers, wallet activity and infrastructure. Persona
               similarity and behavioural characteristics provided the strongest
-              supporting evidence. The combined signals resulted in a 96%
+              supporting evidence. The combined signals resulted in a{" "}
+              {Math.round((attribution?.overall_confidence || 0) * 100)}%
               attribution confidence score.
             </p>
 

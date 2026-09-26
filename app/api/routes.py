@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import text
 import joblib
 import numpy as np
@@ -6,6 +6,8 @@ import numpy as np
 from app.database.neo4j_connection import driver
 from app.database.connection import engine
 from scipy.sparse import hstack
+
+from cyber.src.classify import classify
 
 
 router = APIRouter()
@@ -36,6 +38,9 @@ class ThreatCreate(BaseModel):
     severity: str
     url: str
 
+class CyberTextRequest(BaseModel):
+        text:    str
+
 
 # ============================================================
 # HEALTH
@@ -47,6 +52,13 @@ def health_check():
         "status": "healthy"
     }
 
+@router.post("/cyber/analyze")
+def analyze_cyber(request: CyberTextRequest):
+    return {
+        "status": "success",
+        "message": "Cyber analysis received",
+        "text": request.text
+    }
 
 # ============================================================
 # THREATS
@@ -300,7 +312,29 @@ def get_actors():
         ]
 
     return actors
+@router.get("/actors/{actor_id}")
+def get_actor(actor_id: int):
+    with engine.connect() as connection:
+        result = connection.execute(
+            text("""
+                SELECT
+                    id,
+                    name,
+                    category,
+                    attribution_confidence,
+                    last_seen,
+                    source,
+                    created_at
+                FROM actors
+                WHERE id = :actor_id
+            """),
+            {"actor_id": actor_id}
+        ).fetchone()
 
+        if not result:
+            return {"error": "Actor not found"}
+
+        return dict(result._mapping)
 
 # ============================================================
 # ACTOR HANDLES
@@ -1903,139 +1937,40 @@ def create_attribution(
 
     return attribution
 @router.get("/attribution/{actor_id}")
-def get_attribution(actor_id:int):
-
-
-    with engine.connect() as connection:
-
-        # Get latest stylometry score
-        stylometry = connection.execute(
-            text("""
-                SELECT similarity_score
-                FROM stylometry_results
-                WHERE actor_id = :actor_id
-                ORDER BY created_at DESC
-                LIMIT 1
-            """),
-            {"actor_id": actor_id}
-        ).scalar()
-
-        # Get latest behavioral score
-        behavior = connection.execute(
-            text("""
-                SELECT risk_score
-                FROM behavioral_profiles
-                WHERE actor_id = :actor_id
-                ORDER BY created_at DESC
-                LIMIT 1
-            """),
-            {"actor_id": actor_id}
-        ).scalar()
-
-        # Get latest evidence score
-        evidence = connection.execute(
-            text("""
-                SELECT confidence
-                FROM evidence
-                WHERE actor_id = :actor_id
-                ORDER BY created_at DESC
-                LIMIT 1
-            """),
-            {"actor_id": actor_id}
-        ).scalar()
-
-    stylometry_score = float(stylometry) if stylometry is not None else 0.0
-    behavior_score = float(behavior) if behavior is not None else 0.0
-    evidence_score = float(evidence) if evidence is not None else 0.0
-
-    overall_confidence = (
-        stylometry_score * 0.35
-        + behavior_score * 0.35
-        + evidence_score * 0.30
-    )
-
-    reasoning = (
-        "Automatic attribution calculated using "
-        "stylometry (35%), behavioral analysis (35%), "
-        "and supporting evidence (30%)."
-    )
+def get_attribution(actor_id: int):
 
     with engine.connect() as connection:
 
         result = connection.execute(
             text("""
-                INSERT INTO attribution_results
-                (
+                SELECT
+                    id,
                     actor_id,
                     stylometry_score,
                     behavior_score,
                     evidence_score,
                     overall_confidence,
-                    reasoning
-                )
-                VALUES
-                (
-                    :actor_id,
-                    :stylometry_score,
-                    :behavior_score,
-                    :evidence_score,
-                    :overall_confidence,
-                    :reasoning
-                )
-                RETURNING id,
-                          actor_id,
-                          stylometry_score,
-                          behavior_score,
-                          evidence_score,
-                          overall_confidence,
-                          reasoning,
-                          created_at
-            """),
-            {
-                "actor_id": actor_id,
-                "stylometry_score": stylometry_score,
-                "behavior_score": behavior_score,
-                "evidence_score": evidence_score,
-                "overall_confidence": overall_confidence,
-                "reasoning": reasoning
-            }
-        )
-
-        attribution = dict(
-            result.fetchone()._mapping
-        )
-
-        connection.commit()
-
-    return attribution
-
-    with engine.connect() as connection:
-
-        result = connection.execute(
-            text("""
-                SELECT id,
-                       actor_id,
-                       stylometry_score,
-                       behavior_score,
-                       evidence_score,
-                       overall_confidence,
-                       reasoning,
-                       created_at
+                    reasoning,
+                    created_at
                 FROM attribution_results
                 WHERE actor_id = :actor_id
-                ORDER BY created_at DESC
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
             """),
             {
                 "actor_id": actor_id
             }
         )
 
-        results = [
-            dict(row._mapping)
-            for row in result
-        ]
+        row = result.fetchone()
 
-    return results
+    if not row:
+        raise HTTPException(
+            status_code=404,
+            detail="Attribution not found"
+        )
+
+    return dict(row._mapping)
 # ============================================================
 # AUTOMATIC ATTRIBUTION
 # ============================================================

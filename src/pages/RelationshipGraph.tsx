@@ -15,14 +15,27 @@ function RelationshipGraph() {
   const [loading, setLoading] = useState(true);
   const graphRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
-
+  const [graphData, setGraphData] = useState<any>(null);
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
+  const loadGraph = async () => {
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/graph/actor/1"
+      );
 
-    return () => clearTimeout(timer);
-  }, []);
+      if (response.ok) {
+        const data = await response.json();
+        setGraphData(data);
+      }
+    } catch (error) {
+      console.error("Failed to load graph:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadGraph();
+}, []);
 
   if (loading) {
     return (
@@ -175,8 +188,8 @@ function RelationshipGraph() {
             {/* Actor */}
             <GraphNode
               icon={User}
-              title="ShadowFox"
-              subtitle="Threat Actor"
+              title={graphData?.actor?.name || "ShadowFox"}
+              subtitle={graphData?.actor?.category || "Threat Actor"}
               position="absolute left-1/2 top-[20%] -translate-x-1/2"
               active
             />
@@ -273,11 +286,11 @@ function RelationshipGraph() {
             </p>
 
             <p className="mt-2 text-lg font-semibold text-white">
-              ShadowFox
+               {graphData?.actor?.name || "ShadowFox"}
             </p>
 
             <p className="mt-1 text-xs text-slate-500">
-              Threat Actor
+               {graphData?.actor?.category || "Threat Actor"}
             </p>
 
           </div>

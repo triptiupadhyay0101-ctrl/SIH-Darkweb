@@ -8,24 +8,62 @@ import {
   ExternalLink,
   Activity,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams, } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 function ActorProfile() {
 
   const navigate = useNavigate();
+   const { actorId: routeActorId } = useParams();
+
+  const actorId =
+    routeActorId || window.location.pathname.split("/").pop();
 
   const [loading, setLoading] = useState(true);
+  const [actor, setActor] = useState<any>(null);
+  const [investigation, setInvestigation] = useState<any>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+  const loadActor = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await fetch(
+        `http://127.0.0.1:8000/actors/${actorId}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to load actor: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setActor(data);
+      const investigationResponse = await fetch(
+  `http://127.0.0.1:8000/investigation/${actorId}`
+);
+
+if (investigationResponse.ok) {
+  const investigationData = await investigationResponse.json();
+  setInvestigation(investigationData);
+}
+    } catch (error) {
+      console.error(error);
+      setError("Unable to load actor intelligence.");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
+  };
 
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (loading) {
+  if (actorId) {
+    loadActor();
+  } else {
+    setError("No actor ID was provided.");
+    setLoading(false);
+  }
+}, [actorId]);
+if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
@@ -42,6 +80,24 @@ function ActorProfile() {
       </div>
     );
   }
+  if (error || !actor) {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="text-center">
+        <p className="text-sm font-medium text-red-400">
+          {error || "Actor not found."}
+        </p>
+
+        <button
+          onClick={() => navigate("/search")}
+          className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white"
+        >
+          Back to Search
+        </button>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className="space-y-8">
@@ -55,7 +111,7 @@ function ActorProfile() {
           </p>
 
           <h1 className="mt-2 text-3xl font-semibold text-white">
-            ShadowFox
+             {actor.name}
           </h1>
 
           <p className="mt-2 text-sm text-slate-400">
@@ -97,17 +153,17 @@ function ActorProfile() {
             <div className="min-w-0">
 
               <h2 className="text-xl font-semibold text-white">
-                ShadowFox
+                 {actor.name}
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                Primary threat actor identifier
+                {actor.source || "Primary threat actor identifier"}
               </p>
 
               <div className="mt-4 flex flex-wrap gap-2">
 
                 <span className="rounded-md border border-slate-700 bg-slate-950 px-2.5 py-1 text-xs text-slate-400">
-                  Financial Fraud
+                  {actor.category}
                 </span>
 
                 <span className="rounded-md border border-slate-700 bg-slate-950 px-2.5 py-1 text-xs text-slate-400">
@@ -169,7 +225,7 @@ function ActorProfile() {
           <div className="mt-8 flex items-end gap-2">
 
             <span className="text-5xl font-bold text-white">
-              96
+               {actor.attribution_confidence}
             </span>
 
             <span className="mb-1 text-xl text-slate-500">
@@ -183,7 +239,7 @@ function ActorProfile() {
 
             <div
               className="h-full rounded-full bg-emerald-500"
-              style={{ width: "96%" }}
+              style={{ width: `${actor.attribution_confidence}%` }}
             />
 
           </div>
@@ -227,22 +283,28 @@ function ActorProfile() {
           <IndicatorCard
             icon={AtSign}
             title="Known Handles"
-            value="7"
+            value={investigation?.handles?.length ?? 0}
             detail="@shadow_47"
           />
 
-          <IndicatorCard
-            icon={KeyRound}
-            title="PGP Keys"
-            value="2"
-            detail="Fingerprint linked"
+          <IndicatorCard 
+           icon={KeyRound} 
+           title="PGP Keys" 
+            value={investigation?.pgp_keys?.length ?? 0} 
+           detail={
+          investigation?.pgp_keys?.length
+            ? "Fingerprint linked"
+            : "No PGP keys linked"}
           />
 
-          <IndicatorCard
-            icon={Wallet}
-            title="Wallets"
-            value="4"
-            detail="Crypto addresses"
+          <IndicatorCard 
+  icon={Wallet} 
+  title="Wallets" 
+  value={investigation?.wallets?.length ?? 0} 
+  detail={
+    investigation?.wallets?.length
+      ? "Crypto addresses"
+      : "No wallets linked"}
           />
 
           <IndicatorCard

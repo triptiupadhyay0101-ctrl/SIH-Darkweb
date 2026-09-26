@@ -80,15 +80,54 @@ const events = [
 function Timeline() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-
+  const [timelineData, setTimelineData] = useState<any[]>([]);
   useEffect(() => {
-    const timer = setTimeout(() => {
+  const loadTimeline = async () => {
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/investigation/1"
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setTimelineData(data.timeline || []);
+      }
+    } catch (error) {
+      console.error("Failed to load timeline:", error);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
+  };
 
-    return () => clearTimeout(timer);
-  }, []);
+  loadTimeline();
+}, []);
+const displayEvents =
+  timelineData.length > 0
+    ? timelineData.map((event) => {
+        const eventDate = new Date(event.event_time + "Z");
 
+        return {
+          date: eventDate.toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            timeZone: "UTC",
+          }),
+          time:
+            eventDate.toLocaleTimeString("en-GB", {
+              hour: "2-digit",
+              minute: "2-digit",
+              timeZone: "UTC",
+            }) + " UTC",
+          title: event.event_type,
+          description: event.description,
+          type: event.event_type,
+          icon:
+            events.find((demoEvent) => demoEvent.type === event.event_type)
+              ?.icon || AlertTriangle,
+        };
+      })
+    : events;
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -188,7 +227,7 @@ function Timeline() {
 
           <div className="space-y-8">
 
-            {events.map((event, index) => {
+            {displayEvents.map((event, index) => {
               const Icon = event.icon;
 
               return (
