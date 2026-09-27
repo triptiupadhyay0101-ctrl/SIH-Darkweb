@@ -1,10 +1,13 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import text
 import joblib
 import numpy as np
 
 from app.database.neo4j_connection import driver
 from app.database.connection import engine
+from scipy.sparse import hstack
+
+from cyber.src.classify import classify
 
 
 router = APIRouter()
@@ -15,6 +18,9 @@ router = APIRouter()
 # ============================================================
 
 stylometry_model = joblib.load("stylometry_model.joblib")
+word_vectorizer = joblib.load("word_vectorizer.pkl")
+char_vectorizer = joblib.load("char_vectorizer.pkl")
+
 
 
 # ============================================================
@@ -32,6 +38,9 @@ class ThreatCreate(BaseModel):
     severity: str
     url: str
 
+class CyberTextRequest(BaseModel):
+        text:    str
+
 
 # ============================================================
 # HEALTH
@@ -43,6 +52,13 @@ def health_check():
         "status": "healthy"
     }
 
+@router.post("/cyber/analyze")
+def analyze_cyber(request: CyberTextRequest):
+    return {
+        "status": "success",
+        "message": "Cyber analysis received",
+        "text": request.text
+    }
 
 # ============================================================
 # THREATS
@@ -296,7 +312,29 @@ def get_actors():
         ]
 
     return actors
+@router.get("/actors/{actor_id}")
+def get_actor(actor_id: int):
+    with engine.connect() as connection:
+        result = connection.execute(
+            text("""
+                SELECT
+                    id,
+                    name,
+                    category,
+                    attribution_confidence,
+                    last_seen,
+                    source,
+                    created_at
+                FROM actors
+                WHERE id = :actor_id
+            """),
+            {"actor_id": actor_id}
+        ).fetchone()
 
+        if not result:
+            return {"error": "Actor not found"}
+
+        return dict(result._mapping)
 
 # ============================================================
 # ACTOR HANDLES
@@ -1351,38 +1389,196 @@ class StylometryCreate(BaseModel):
 @router.post("/stylometry/predict")
 def predict_stylometry(text: str):
 
-    prediction = stylometry_model.predict(
-        [text]
-    )
+    # Pass RAW TEXT directly to the trained pipeline
+    prediction = stylometry_model.predict([text])
 
     decision_scores = np.asarray(
         stylometry_model.decision_function([text])
     ).ravel()
 
-    # Convert decision scores into a relative
-    # confidence-style score.
-    # This is NOT a calibrated probability.
     exp_scores = np.exp(
         decision_scores - decision_scores.max()
     )
 
     relative_confidence = (
-        exp_scores.max()
-        / exp_scores.sum()
+        exp_scores.max() / exp_scores.sum()
     )
 
     match_score = relative_confidence * 100
 
     return {
-        "predicted_author": prediction[0],
-        "match_score": round(
-            float(match_score),
-            2
-        )
+        "predicted_author": prediction[0].item()
+        if hasattr(prediction[0], "item")
+        else prediction[0],
+
+        "confidence": round(float(match_score), 2)
+    }
+# # MODEL 2 - TUNED NAIVE BAYES
+
+    features = model2_vectorizer.transform([text])
+
+    prediction = model2.predict(features)
+
+    probabilities = model2.predict_proba(features)[0]
+
+    confidence = float(probabilities.max() * 100)
+
+    return {
+        "predicted_author": int(prediction[0]),
+        "match_score": round(confidence, 2)
+    }
+# MODEL 2 - TUNED NAIVE BAYES
+model2 = joblib.load("models/model2_tuned_alpha001.pkl")
+model2_vectorizer = joblib.load(
+    "models/model2_tuned_tfidf_vectorizer.pkl"
+)
+
+
+@router.post("/stylometry/model2")
+def predict_stylometry_model2(text: str):
+    features = model2_vectorizer.transform([text])
+
+    prediction = model2.predict(features)
+
+    probabilities = model2.predict_proba(features)[0]
+
+    confidence = float(probabilities.max() * 100)
+
+    return {
+        "predicted_author": int(prediction[0]),
+        "match_score": round(confidence, 2)
+    }
+# MODEL 2 - TUNED NAIVE BAYES
+
+
+# ---------# MODEL 2 - TUNED NAIVE BAYES
+# ------------------------------------------------------------
+# MODEL 3 - RANDOM FOREST
+# ------------------------------------------------------------
+
+model3 = joblib.load("model3_random_forest.pkl")
+model3_features = joblib.load("model3_features.pkl")
+
+
+def extract_model3_features(text):
+    import re
+
+    words = re.findall(r"\b\w+\b", text)
+    sentences = re.split(r"[.!?]+", text)
+    sentences = [s for s in sentences if s.strip()]
+
+    word_count = len(words)
+    sentence_count = len(sentences)
+    character_count = len(text)
+    average_word_length = (
+        sum(len(word) for word in words) / word_count
+        if word_count else 0
+    )
+    average_sentence_length = (
+        word_count / sentence_count
+        if sentence_count else 0
+    )
+    punctuation_count = sum(
+        1 for char in text if char in ".,!?;:'\"-()[]{}"
+    )
+    uppercase_count = sum(
+        1 for char in text if char.isupper()
+    )
+    digit_count = sum(
+        1 for char in text if char.isdigit()
+    )
+    unique_words = len(set(words))
+    vocabulary_richness = (
+        unique_words / word_count
+        if word_count else 0
+    )
+
+    feature_values = {
+        "word_count": word_count,
+        "sentence_count": sentence_count,
+        "character_count": character_count,
+        "average_word_length": average_word_length,
+        "average_sentence_length": average_sentence_length,
+        "punctuation_count": punctuation_count,
+        "uppercase_count": uppercase_count,
+        "digit_count": digit_count,
+        "unique_words": unique_words,
+        "vocabulary_richness": vocabulary_richness
     }
 
+    return [
+        feature_values[name]
+        for name in model3_features
+    ]
 
+
+@router.post("/stylometry/model3")
+def predict_stylometry_model3(text: str):
+    features = np.array(
+        [extract_model3_features(text)]
+    )
+
+    prediction = model3.predict(features)
+
+    if hasattr(model3, "predict_proba"):
+        probabilities = model3.predict_proba(features)[0]
+        confidence = float(probabilities.max() * 100)
+    else:
+        confidence = 0.0
+
+    return {
+        "predicted_author": int(prediction[0]),
+        "match_score": round(confidence, 2)
+    }
 # ------------------------------------------------------------
+# ------------------------------------------------------------
+# SIMILARITY MODEL
+# ------------------------------------------------------------
+
+similarity_vectorizer = joblib.load(
+    "models/similarity/similarity_tfidf_vectorizer.pkl"
+)
+
+similarity_matrix = joblib.load(
+    "models/similarity/similarity_tfidf_matrix.pkl"
+)
+
+similarity_reference_data = joblib.load(
+    "models/similarity/similarity_reference_data.pkl"
+)
+
+
+@router.post("/stylometry/similarity")
+def stylometry_similarity(text: str):
+    from sklearn.metrics.pairwise import cosine_similarity
+
+    query_vector = similarity_vectorizer.transform([text])
+
+    similarities = cosine_similarity(
+        query_vector,
+        similarity_matrix
+    )[0]
+
+    top_indices = similarities.argsort()[-10:][::-1]
+
+    results = []
+
+    for index in top_indices:
+        reference = similarity_reference_data.iloc[index]
+
+        results.append({
+            "similarity_score": round(
+                float(similarities[index]),
+                4
+            ),
+            "author_id": int(reference["author_id"]),
+            "text": reference["text"]
+        })
+
+    return {
+        "query": text,
+        "matches": results
+    }
 # SAVE STYLOMETRY RESULT
 # ------------------------------------------------------------
 
@@ -1391,7 +1587,7 @@ def save_stylometry_result(
     actor_id: int,
     compared_text: str,
     similarity_score: float,
-    source: str = "AI Stylometry"
+   source: str = "AI Stylometry"
 ):
 
     with engine.connect() as connection:
@@ -1741,139 +1937,40 @@ def create_attribution(
 
     return attribution
 @router.get("/attribution/{actor_id}")
-def get_attribution(actor_id:int):
-
-
-    with engine.connect() as connection:
-
-        # Get latest stylometry score
-        stylometry = connection.execute(
-            text("""
-                SELECT similarity_score
-                FROM stylometry_results
-                WHERE actor_id = :actor_id
-                ORDER BY created_at DESC
-                LIMIT 1
-            """),
-            {"actor_id": actor_id}
-        ).scalar()
-
-        # Get latest behavioral score
-        behavior = connection.execute(
-            text("""
-                SELECT risk_score
-                FROM behavioral_profiles
-                WHERE actor_id = :actor_id
-                ORDER BY created_at DESC
-                LIMIT 1
-            """),
-            {"actor_id": actor_id}
-        ).scalar()
-
-        # Get latest evidence score
-        evidence = connection.execute(
-            text("""
-                SELECT confidence
-                FROM evidence
-                WHERE actor_id = :actor_id
-                ORDER BY created_at DESC
-                LIMIT 1
-            """),
-            {"actor_id": actor_id}
-        ).scalar()
-
-    stylometry_score = float(stylometry) if stylometry is not None else 0.0
-    behavior_score = float(behavior) if behavior is not None else 0.0
-    evidence_score = float(evidence) if evidence is not None else 0.0
-
-    overall_confidence = (
-        stylometry_score * 0.35
-        + behavior_score * 0.35
-        + evidence_score * 0.30
-    )
-
-    reasoning = (
-        "Automatic attribution calculated using "
-        "stylometry (35%), behavioral analysis (35%), "
-        "and supporting evidence (30%)."
-    )
+def get_attribution(actor_id: int):
 
     with engine.connect() as connection:
 
         result = connection.execute(
             text("""
-                INSERT INTO attribution_results
-                (
+                SELECT
+                    id,
                     actor_id,
                     stylometry_score,
                     behavior_score,
                     evidence_score,
                     overall_confidence,
-                    reasoning
-                )
-                VALUES
-                (
-                    :actor_id,
-                    :stylometry_score,
-                    :behavior_score,
-                    :evidence_score,
-                    :overall_confidence,
-                    :reasoning
-                )
-                RETURNING id,
-                          actor_id,
-                          stylometry_score,
-                          behavior_score,
-                          evidence_score,
-                          overall_confidence,
-                          reasoning,
-                          created_at
-            """),
-            {
-                "actor_id": actor_id,
-                "stylometry_score": stylometry_score,
-                "behavior_score": behavior_score,
-                "evidence_score": evidence_score,
-                "overall_confidence": overall_confidence,
-                "reasoning": reasoning
-            }
-        )
-
-        attribution = dict(
-            result.fetchone()._mapping
-        )
-
-        connection.commit()
-
-    return attribution
-
-    with engine.connect() as connection:
-
-        result = connection.execute(
-            text("""
-                SELECT id,
-                       actor_id,
-                       stylometry_score,
-                       behavior_score,
-                       evidence_score,
-                       overall_confidence,
-                       reasoning,
-                       created_at
+                    reasoning,
+                    created_at
                 FROM attribution_results
                 WHERE actor_id = :actor_id
-                ORDER BY created_at DESC
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
             """),
             {
                 "actor_id": actor_id
             }
         )
 
-        results = [
-            dict(row._mapping)
-            for row in result
-        ]
+        row = result.fetchone()
 
-    return results
+    if not row:
+        raise HTTPException(
+            status_code=404,
+            detail="Attribution not found"
+        )
+
+    return dict(row._mapping)
 # ============================================================
 # AUTOMATIC ATTRIBUTION
 # ============================================================

@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sih.example/schema/investigator-output.schema.json",
+  "title": "SIH Cybersecurity Investigator Output",
+  "description": "Schema for authorized/controlled Tor onion-service infrastructure intelligence observations and analytical indicators. Correlation and confidence fields represent signals, not definitive attribution.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "generated_at",
+    "observations",
+    "indicators"
+  ],
+  "properties": {
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "observations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/observation"
+      }
+    },
+    "indicators": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/indicator"
+      }
+    }
+  },
+  "$defs": {
+    "observation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "target",
+        "observed_at",
+        "http_status",
+        "server_header",
+        "content_type",
+        "content_length",
+        "page_title",
+        "body_sha256",
+        "favicon_sha256",
+        "server_status_exposed",
+        "evidence_json"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "target": {
+          "type": "string",
+          "pattern": "^[a-z2-7]{56}\\.onion$"
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "http_status": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 100,
+          "maximum": 599
+        },
+        "server_header": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "content_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "content_length": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "page_title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "body_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-fA-F]{64}$"
+        },
+        "favicon_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-fA-F]{64}$"
+        },
+        "server_status_exposed": {
+          "type": [
+            "integer",
+            "boolean"
+          ]
+        },
+        "evidence_json": {
+          "type": "string"
+        },
+        "classification": {
+          "$ref": "#/$defs/classification"
+        },
+        "tls": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "infrastructure_linking": {
+          "$ref": "#/$defs/infrastructure_linking"
+        }
+      }
+    },
+    "indicator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "observation_id",
+        "indicator_type",
+        "value",
+        "severity",
+        "confidence",
+        "evidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "observation_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "indicator_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "labels"
+      ],
+      "properties": {
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "credential_theft",
+              "data_theft",
+              "malware",
+              "fraud",
+              "hacking_services",
+              "drugs",
+              "weapons"
+            ]
+          }
+        }
+      }
+    },
+    "infrastructure_linking": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "correlation_attempted": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "matches": {
+          "type": "array"
+        }
+      }
+    }
+  }
+}

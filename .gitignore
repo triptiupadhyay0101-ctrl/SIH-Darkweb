@@ -1,3 +1,25 @@
+# =========================
+# Frontend / Node
+# =========================
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# =========================
+# Python / Backend
+# =========================
+
 # Virtual environment
 venv/
 
@@ -6,16 +28,32 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
 # Environment variables / secrets
 .env
 
-# Local ML model
+# Local ML models
 *.joblib
 
-# VS Code
-.vscode/
+# =========================
+# Editor / OS files
+# =========================
 
-# OS files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
 .DS_Store
 Thumbs.db
+<<<<<<< HEAD
+
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 data/authorship_detection_kazakh_text.csv
