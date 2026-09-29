@@ -9,3 +9,4 @@ python-dotenv
 neo4j
 psycopg[binary]
 scipy
+scikit-learn
