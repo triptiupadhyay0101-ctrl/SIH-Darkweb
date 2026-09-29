@@ -1535,25 +1535,23 @@ def predict_stylometry_model3(text: str):
 # SIMILARITY MODEL
 # ------------------------------------------------------------
 
-similarity_vectorizer = joblib.load(
-    "models/similarity/similarity_tfidf_vectorizer.pkl"
-)
-
-similarity_matrix = joblib.load(
-    "models/similarity/similarity_tfidf_matrix.pkl"
-)
-
-similarity_reference_data = joblib.load(
-    "models/similarity/similarity_reference_data.pkl"
-)
-
-
 @router.post("/stylometry/similarity")
 def stylometry_similarity(text: str):
     from sklearn.metrics.pairwise import cosine_similarity
 
-    query_vector = similarity_vectorizer.transform([text])
+    similarity_vectorizer = joblib.load(
+        "models/similarity/similarity_tfidf_vectorizer.pkl"
+    )
 
+    similarity_matrix = joblib.load(
+        "models/similarity/similarity_tfidf_matrix.pkl"
+    )
+
+    similarity_reference_data = joblib.load(
+        "models/similarity/similarity_reference_data.pkl"
+    )
+
+    query_vector = similarity_vectorizer.transform([text])
     similarities = cosine_similarity(
         query_vector,
         similarity_matrix
