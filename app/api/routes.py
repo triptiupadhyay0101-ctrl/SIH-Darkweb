@@ -17,11 +17,9 @@ router = APIRouter()
 # LOAD STYLOMETRY MODEL
 # ============================================================
 
-stylometry_model = joblib.load("stylometry_model.joblib")
-word_vectorizer = joblib.load("word_vectorizer.pkl")
-char_vectorizer = joblib.load("char_vectorizer.pkl")
-
-
+stylometry_model = None
+word_vectorizer = None
+char_vectorizer = None
 
 # ============================================================
 # THREAT MODELS
@@ -1428,14 +1426,21 @@ def predict_stylometry(text: str):
         "match_score": round(confidence, 2)
     }
 # MODEL 2 - TUNED NAIVE BAYES
-model2 = joblib.load("models/model2_tuned_alpha001.pkl")
-model2_vectorizer = joblib.load(
-    "models/model2_tuned_tfidf_vectorizer.pkl"
-)
-
+model2 = None
+model2_vectorizer = None
 
 @router.post("/stylometry/model2")
 def predict_stylometry_model2(text: str):
+    global model2, model2_vectorizer
+
+    if model2 is None:
+        model2 = joblib.load("models/model2_tuned_alpha001.pkl")
+
+    if model2_vectorizer is None:
+        model2_vectorizer = joblib.load(
+            "models/model2_tuned_tfidf_vectorizer.pkl"
+        )
+
     features = model2_vectorizer.transform([text])
 
     prediction = model2.predict(features)
@@ -1456,8 +1461,8 @@ def predict_stylometry_model2(text: str):
 # MODEL 3 - RANDOM FOREST
 # ------------------------------------------------------------
 
-model3 = joblib.load("model3_random_forest.pkl")
-model3_features = joblib.load("model3_features.pkl")
+model3 = None
+model3_features = None
 
 
 def extract_model3_features(text):
@@ -1514,21 +1519,8 @@ def extract_model3_features(text):
 
 @router.post("/stylometry/model3")
 def predict_stylometry_model3(text: str):
-    features = np.array(
-        [extract_model3_features(text)]
-    )
-
-    prediction = model3.predict(features)
-
-    if hasattr(model3, "predict_proba"):
-        probabilities = model3.predict_proba(features)[0]
-        confidence = float(probabilities.max() * 100)
-    else:
-        confidence = 0.0
-
     return {
-        "predicted_author": int(prediction[0]),
-        "match_score": round(confidence, 2)
+        "error": "Model 3 is unavailable in the deployed environment because the model file exceeds the available memory."
     }
 # ------------------------------------------------------------
 # ------------------------------------------------------------

@@ -1,0 +1,10 @@
+backend/
+data/
+models/
+*.pkl
+*.joblib
+*.csv
+*.db
+*.sqlite
+*.sqlite3
+.env

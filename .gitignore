@@ -57,3 +57,4 @@ Thumbs.db
 *.sln
 *.sw?
 data/authorship_detection_kazakh_text.csv
+.vercel
