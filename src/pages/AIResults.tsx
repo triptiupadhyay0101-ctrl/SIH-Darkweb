@@ -23,8 +23,8 @@ function AIResults() {
   const loadResults = async () => {
     try {
       const [actorResponse, attributionResponse] = await Promise.all([
-        fetch("http://127.0.0.1:8000/actors/1"),
-        fetch("http://127.0.0.1:8000/attribution/1"),
+        fetch("https://sih-darkweb.onrender.com/actors/1"),
+        fetch("https://sih-darkweb.onrender.com/attribution/1"),
       ]);
 
       if (actorResponse.ok) {

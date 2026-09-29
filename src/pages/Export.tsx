@@ -44,7 +44,7 @@ function Export() {
 
   try {
     const response = await fetch(
-      "http://127.0.0.1:8000/export/actor/1"
+      "https://sih-darkweb.onrender.com/export/actor/1"
     );
 
     if (!response.ok) {

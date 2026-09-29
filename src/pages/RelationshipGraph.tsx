@@ -20,7 +20,7 @@ function RelationshipGraph() {
   const loadGraph = async () => {
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/graph/actor/1"
+        "https://sih-darkweb.onrender.com/graph/actor/1"
       );
 
       if (response.ok) {

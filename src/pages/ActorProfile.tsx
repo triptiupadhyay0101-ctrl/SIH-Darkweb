@@ -31,7 +31,7 @@ function ActorProfile() {
       setError("");
 
       const response = await fetch(
-        `http://127.0.0.1:8000/actors/${actorId}`
+        `https://sih-darkweb.onrender.com/actors/${actorId}`
       );
 
       if (!response.ok) {
@@ -41,7 +41,7 @@ function ActorProfile() {
       const data = await response.json();
       setActor(data);
       const investigationResponse = await fetch(
-  `http://127.0.0.1:8000/investigation/${actorId}`
+  `https://sih-darkweb.onrender.com/investigation/${actorId}`
 );
 
 if (investigationResponse.ok) {

@@ -64,7 +64,7 @@ const [error, setError] = useState("");
 
   try {
     const response = await fetch(
-      `http://127.0.0.1:8000/intelligence/search?q=${encodeURIComponent(
+      `https://sih-darkweb.onrender.com/intelligence/search?q=${encodeURIComponent(
         trimmedQuery
       )}`
     );
