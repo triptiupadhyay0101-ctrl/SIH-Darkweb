@@ -3,7 +3,7 @@ import {
   AtSign,
   KeyRound,
   Wallet,
-  Globe,
+  
   Network,
   Search,
   ZoomIn,
@@ -173,17 +173,7 @@ function RelationshipGraph() {
               linked to
             </span>
 
-            <div className="absolute left-[28%] top-[50%] h-px w-[22%] bg-slate-700" />
-
-            <div className="absolute left-[50%] top-[50%] h-px w-[22%] bg-slate-700" />
-
-            <div className="absolute left-1/2 top-[50%] h-[17%] w-px bg-slate-700" />
-
-            <span className="absolute left-[51%] top-[57%] -translate-x-1/2 text-[10px] font-medium text-slate-500">
-              hosted on
-            </span>
-
-            <div className="absolute left-[72%] top-[50%] h-[17%] w-px bg-slate-700" />
+           
 
             {/* Actor */}
             <GraphNode
@@ -197,50 +187,33 @@ function RelationshipGraph() {
             {/* Handle */}
             <GraphNode
               icon={AtSign}
-              title="@shadow_47"
-              subtitle="Handle"
+              title={graphData?.handles?.[0]?.handle || "No handle"}
+              subtitle={graphData?.handles?.[0]?.platform || "Handle"}
               position="absolute left-[16%] top-[42%]"
             />
 
             {/* PGP */}
             <GraphNode
               icon={KeyRound}
-              title="PGP Key"
-              subtitle="8A42...4F28"
+             title="PGP Key"
+subtitle={
+  graphData?.pgp_keys?.[0]?.fingerprint
+    ? `${graphData.pgp_keys[0].fingerprint.slice(0, 4)}...${graphData.pgp_keys[0].fingerprint.slice(-4)}`
+    : "No PGP key"
+}
+        
               position="absolute left-1/2 top-[42%] -translate-x-1/2"
             />
 
             {/* Wallet */}
             <GraphNode
               icon={Wallet}
-              title="0x7A91...C42F"
-              subtitle="Crypto Wallet"
+              title={graphData?.wallets?.[0]?.wallet_address || "No wallet"}
+subtitle={graphData?.wallets?.[0]?.blockchain || "Crypto Wallet"}
               position="absolute right-[16%] top-[42%]"
             />
 
-            {/* Platform */}
-            <GraphNode
-              icon={Globe}
-              title="Underground Forum"
-              subtitle="Platform"
-              position="absolute left-1/2 top-[67%] -translate-x-1/2"
-            />
-
-            {/* Secondary platform */}
-            <GraphNode
-              icon={Globe}
-              title="Marketplace"
-              subtitle="Platform"
-              position="absolute left-[16%] top-[67%]"
-            />
-
-            {/* Onion Service */}
-            <GraphNode
-              icon={Globe}
-              title="darkfox7x...onion"
-              subtitle="Onion Service"
-              position="absolute right-[16%] top-[67%]"
-            />
+           
           </div>
 
           {/* Status */}
@@ -249,7 +222,17 @@ function RelationshipGraph() {
             <Network size={15} className="text-blue-400" />
 
             <span className="text-xs text-slate-400">
-              7 entities · 7 relationships
+             {1 +
+  (graphData?.handles?.length ?? 0) +
+  (graphData?.pgp_keys?.length ?? 0) +
+  (graphData?.wallets?.length ?? 0) +
+  (graphData?.infrastructure?.length ?? 0)}{" "}
+entities ·{" "}
+{(graphData?.handles?.length ?? 0) +
+  (graphData?.pgp_keys?.length ?? 0) +
+  (graphData?.wallets?.length ?? 0) +
+  (graphData?.infrastructure?.length ?? 0)}{" "}
+connections
             </span>
 
           </div>
@@ -306,7 +289,7 @@ function RelationshipGraph() {
 
               <Connection
                 icon={AtSign}
-                label="@shadow_47"
+                 label={graphData?.handles?.[0]?.handle || "No handle"}
                 type="Handle"
               />
 
@@ -318,29 +301,11 @@ function RelationshipGraph() {
 
               <Connection
                 icon={Wallet}
-                label="0x7A91...C42F"
+               label={graphData?.wallets?.[0]?.wallet_address || "No wallet"}
                 type="Wallet"
               />
 
-              <Connection
-                icon={Globe}
-                label="Underground Forum"
-                type="Platform"
-              />
-
-              <Connection
-                icon={Globe}
-                label="Marketplace"
-                type="Platform"
-              />
-
-              <Connection
-                icon={Globe}
-                label="darkfox7x...onion"
-                type="Onion Service"
-
-              />
-
+              
             </div>
 
           </div>
@@ -351,11 +316,11 @@ function RelationshipGraph() {
             <div className="flex items-center justify-between">
 
               <span className="text-xs text-slate-500">
-                Relationship confidence
+                Attribution confidence
               </span>
 
               <span className="text-sm font-semibold text-emerald-400">
-                94%
+               {Math.round((graphData?.actor?.attribution_confidence ?? 0) * 100)}%
               </span>
 
             </div>
@@ -364,7 +329,9 @@ function RelationshipGraph() {
 
               <div
                 className="h-full rounded-full bg-emerald-500"
-                style={{ width: "94%" }}
+                style={{
+  width: `${(graphData?.actor?.attribution_confidence ?? 0) * 100}%`,
+}}
               />
 
             </div>
